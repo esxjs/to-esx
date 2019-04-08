@@ -5,7 +5,7 @@ Converts JSX and `React.createElement` into [esx](https://github.com/esxjs/esx)
 The basis of:
 
 * [`esx-optmize`](https://github.com/esxjs/esx-optimize)
-* [`babel-esx`](https://github.com/esxjs/babel-esx)
+* [`babel-plugin-esx`](https://github.com/esxjs/babel-plugin-esx)
 
 ## API
 
