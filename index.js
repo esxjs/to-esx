@@ -6,7 +6,10 @@ module.exports = convert
 
 function convert (src) {  
   const chunks = src.split('')
-  const ast = parse(src, {allowImportExportEverywhere: true})
+  const ast = parse(src, {
+    allowImportExportEverywhere: true,
+    preserveParens: true
+  })
   const { body } = ast
   var eol = ''
   var esx = 'esx'
@@ -173,13 +176,12 @@ function convert (src) {
     
     if (type === 'JSXElement') {
       const isRoot = parent.type !== 'JSXElement'
-      const newline = parent.type === 'VariableDeclarator'
       if (isRoot) {
         if (isRenderToString(parent)) {
-          esxBlock(node, newline, '')
+          esxBlock(node, '')
           blank(parent.callee.start, parent.callee.end)
         } else {
-          esxBlock(node, newline)
+          esxBlock(node)
           
         }
       }
@@ -257,19 +259,27 @@ function convert (src) {
     const isRoot = node.parent.type !== 'CallExpression'
     const isInRenderToString = isRenderToString(node.parent)
     if (isRoot) {
-      esxBlock(node, true)
+      esxBlock(node)
     } else if (isInRenderToString) {
-      esxBlock(node, true, '')
+      esxBlock(node, '')
       blank(node.parent.callee.start, node.parent.callee.end)
     }
   }
 
-  function esxBlock (node, n = false, tag = esx) {
+  function esxBlock (node, tag = esx) {
     const { start, end } = node 
-    if (chunks[start - 1] === '(') chunks[start - 1] = tag + ' `'
-    else chunks[start] = tag + ' `' + chunks[start]
-    if (chunks[end] === ';') chunks[end] = '`;' + (n ? '\n' : '')
-    else chunks[end] = '`' + (n ? '\n' : '')
+    if (node.parent.type === 'ParenthesizedExpression') {
+      chunks[node.parent.start] = ''
+      chunks[node.parent.end - 1] = ''
+    }
+    if (node.parent.type === 'CallExpression') {
+      if (isRenderToString(node.parent)) {
+        chunks[node.parent.start + source(node.parent.callee).length] = ''
+        chunks[node.parent.end - 1] = ''
+      }
+    }
+    chunks[start] = tag + ' `' + chunks[start]
+    chunks[end] = '`' + (chunks[end] || '')
     const registrations = Array.from(components)
     if (registrations.length > 0) {
       let p = node.parent

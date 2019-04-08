@@ -266,7 +266,7 @@ test('createElement property assignment basic', async ({is}) => {
   is(convert(src), esx)
 })
 
-test('createElement pure function basic', async ({is}) => {
+only('createElement pure function basic', async ({is}) => {
   const src = [
     `const React = require('react')`,
     `module.exports = () => React.createElement('div', null, React.createElement('p', null, 'hi'))`
@@ -788,17 +788,21 @@ test('semi-colons on converted code', async ({is}) => {
   is(convert(src), esx)
 })
 
-test('newline consistency', async ({is}) => {
+only('newline consistency', async ({is}) => {
   const src = [
     `const React = require('react')`,
     'module.exports = () => (<div attr={42}></div>)',
     `console.log('some code after')`,
     `const el = <div attr={42}></div>`,
     `console.log('some code after')`,
-    `(<div attr={42}></div>)`,
+    `;(<div attr={42}></div>)`,
     `console.log('some code after')`,
     `function f () {`,
     '  return (<div attr={42}></div>)',
+    `  console.log('some code after')`,
+    `}`,
+    `function g () {`,
+    '  return <div attr={42}></div>',
     `  console.log('some code after')`,
     `}`
   ].join('\n')
@@ -809,9 +813,13 @@ test('newline consistency', async ({is}) => {
     `console.log('some code after')`,
     'const el = esx `<div attr=${42}></div>`',
     `console.log('some code after')`,
-    'esx `<div attr=${42}></div>`',
+    ';esx `<div attr=${42}></div>`',
     `console.log('some code after')`,
     `function f () {`,
+    '  return esx `<div attr=${42}></div>`',
+    `  console.log('some code after')`,
+    `}`,
+    `function g () {`,
     '  return esx `<div attr=${42}></div>`',
     `  console.log('some code after')`,
     `}`
@@ -1110,7 +1118,7 @@ test('tracks the createElement reference - reassignment', async ({is}) => {
   is(convert(src), esx)
 })
 
-test('renderToString - jsx passed directly', async ({is}) => {
+only('renderToString - jsx passed directly', async ({is}) => {
   const src = [
     `const ReactDomServer = require('react-dom/server')`,
     `const React = require('react')`,
