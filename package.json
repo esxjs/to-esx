@@ -1,0 +1,43 @@
+{
+  "name": "jsx-to-esx",
+  "version": "1.0.0",
+  "description": "Converts JSX and `React.createElement` into [esx](https://github.com/esxjs/esx)",
+  "main": "index.js",
+  "bin": {
+    "jsx-to-esx": "./cmd.js"
+  },
+  "scripts": {
+    "test": "NODE_OPTIONS='-r ./test/check --experimental-vm-modules --no-warnings' tap test/*.test.js",
+    "only": "TAP_ONLY=1 NODE_OPTIONS='-r ./test/check --experimental-vm-modules --no-warnings' node test/*.test.js | grep -v SKIP",
+    "cov": "NODE_OPTIONS='-r ./test/check --experimental-vm-modules --no-warnings' tap --100 --coverage-report=html test/*.test.js"
+  },
+  "keywords": [
+    "esx",
+    "react",
+    "createElement",
+    "jsx",
+    "fast",
+    "performance",
+    "native"
+  ],
+  "author": "David Mark Clements <david.mark.clements@googlemail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "acorn": "^6.1.1",
+    "acorn-jsx": "^5.0.1"
+  },
+  "devDependencies": {
+    "tap": "^12.0.1"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/esxjs/to-esx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/esxjs/to-esx/issues"
+  },
+  "homepage": "https://github.com/esxjs/to-esx#readme"
+}
