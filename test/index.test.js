@@ -1,10 +1,10 @@
 'use strict'
-const { test, only } = require('tap')
+const { test } = require('tap')
 const toEsx = require('..')
 const check = require('./check')
 const convert = (source) => {
   const result = toEsx(source)
-  // check(result)
+  check(result)
   return result
 }
 
@@ -1115,7 +1115,7 @@ test('renderToString - jsx passed directly', async ({is}) => {
   is(convert(src), esx)
 })
 
-only('renderToString - createElement passed directly', async ({is}) => {
+test('renderToString - createElement passed directly', async ({is}) => {
   const src = [
     `const ReactDomServer = require('react-dom/server')`,
     `const React = require('react')`,
@@ -1284,7 +1284,7 @@ test('tracks renderToString reference - reassignment', async ({is}) => {
   is(convert(src), esx)
 })
 
-only('element passed to React.renderToString', async ({is}) => {
+test('element passed to React.renderToString', async ({is}) => {
   const src = [
     `const { renderToString } = require('react-dom/server')`,
     `const { createElement } = require('react')`,
