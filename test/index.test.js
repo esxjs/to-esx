@@ -1,5 +1,5 @@
 'use strict'
-const { test } = require('tap')
+const { test, only } = require('tap')
 const toEsx = require('..')
 const check = require('./check')
 const convert = (source) => {
@@ -12,13 +12,21 @@ test('empty files are left unmodified', async ({ is }) => {
   is(convert(``), ``)
 })
 
-test('include', async ({is}) => {
-  is(convert(`'use strict'`), `'use strict'\nconst esx = require('esx')()`)
-  is(convert(`'use strict';`), `'use strict';\nconst esx = require('esx')();`)
+test('includes if react is loaded', async ({is}) => {
   is(convert(`import React from 'react'`), `const esx = require('esx')()\nimport React from 'react'`)
   is(convert(`const React = require('react')`), `const esx = require('esx')()\nconst React = require('react')`)
   is(convert(`import React from 'react';`), `const esx = require('esx')();\nimport React from 'react';`)
   is(convert(`const React = require('react');`), `const esx = require('esx')();\nconst React = require('react');`)
+})
+
+test('includes if react-dom/server is loaded', async ({is}) => {
+  is(convert(`import ReactDomServer from 'react-dom/server'`), `const esx = require('esx')()\nimport ReactDomServer from 'react-dom/server'`)
+  is(convert(`const ReactDomServer = require('react-dom/server')`), `const esx = require('esx')()\nconst ReactDomServer = require('react-dom/server')`)
+})
+
+test('does not include unless react or react-dom/server are loaded', async ({is}) => {
+  is(convert(`'use strict'`), `'use strict'`)
+  is(convert(`'use strict';`), `'use strict';`)
 })
 
 test('JSX basic', async ({is}) => {
@@ -1050,10 +1058,12 @@ test('createElement called directly from function return value', async ({is}) =>
 
 test('ignores createElement on objects that are not react module', async ({is}) => {
   const src = [
+    `const React = require('react')`,
     `document.createElement('div')`
   ].join('\n')
   const esx = [
     `const esx = require('esx')()`,
+    `const React = require('react')`,
     `document.createElement('div')`
   ].join('\n')
   is(convert(src), esx)

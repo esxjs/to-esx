@@ -12,15 +12,20 @@ function convert (src) {
   var esx = 'esx'
   var included = false
   var initialized = false
+  var reactLoaded = false
   const lastLine = chunks[chunks.length - 1] === '\n' ? '\n' : ''
   const components = new Set()
   const references = {
     React: new Set(),
     createElement: new Set([]),
-    ReactDomServer: new Set(['ReactDomServer']),
-    renderToString: new Set(['renderToString'])
+    ReactDomServer: new Set([]),
+    renderToString: new Set([])
   }
   walk(ast, null, analyze)
+  reactLoaded = reactLoaded || (Object.values(references).reduce((count, set) => {
+    return (count + set.size)
+  }, 0) > 0)
+  if (reactLoaded === false) return src
   walk(ast, null, transform)
   const [ top ] = body
   if (top) {
@@ -37,7 +42,7 @@ function convert (src) {
   return chunks.join('').trim() + (lastLine)
 
   function analyze (node) {
-    const { type, name, parent, callee } = node
+    const { type, parent, callee } = node
     if (chunks[node.end] === ';') eol = ';'
     if (type === 'ImportDefaultSpecifier') {
       if (parent.source.value === 'esx') {
@@ -68,6 +73,9 @@ function convert (src) {
 
     if (type === 'CallExpression' && callee.name === 'require') {
       const required = node.arguments[0].value
+      if (required === 'react' || required === 'react-dom/server') {
+        reactLoaded = true
+      }
       if (parent.type === 'CallExpression') {
         const variable = parent.parent
         if (variable.type === 'VariableDeclarator') {
@@ -358,6 +366,7 @@ function convert (src) {
   }
 
   function walk (node, parent, fn) {
+    if (node === null) return
     node.parent = parent
     Object.keys(node).forEach((key) => {
         if (key === 'parent') return
