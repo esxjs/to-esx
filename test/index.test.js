@@ -266,7 +266,7 @@ test('createElement property assignment basic', async ({is}) => {
   is(convert(src), esx)
 })
 
-only('createElement pure function basic', async ({is}) => {
+test('createElement pure function basic', async ({is}) => {
   const src = [
     `const React = require('react')`,
     `module.exports = () => React.createElement('div', null, React.createElement('p', null, 'hi'))`
@@ -314,6 +314,19 @@ test('createElement hardcoded props', async ({is}) => {
     `const esx = require('esx')()`,
     `const React = require('react')`,
     'module.exports = () => esx `<img a="42" b="test"/>`'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('createElement literal key props', async ({is}) => {
+  const src = [
+    `const React = require('react')`,
+    `module.exports = () => React.createElement('img', {"a-b": 42, "b": 'test'})`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const React = require('react')`,
+    'module.exports = () => esx `<img a-b="42" b="test"/>`'
   ].join('\n')
   is(convert(src), esx)
 })
@@ -788,7 +801,7 @@ test('semi-colons on converted code', async ({is}) => {
   is(convert(src), esx)
 })
 
-only('newline consistency', async ({is}) => {
+test('newline consistency', async ({is}) => {
   const src = [
     `const React = require('react')`,
     'module.exports = () => (<div attr={42}></div>)',
@@ -1118,7 +1131,7 @@ test('tracks the createElement reference - reassignment', async ({is}) => {
   is(convert(src), esx)
 })
 
-only('renderToString - jsx passed directly', async ({is}) => {
+test('renderToString - jsx passed directly', async ({is}) => {
   const src = [
     `const ReactDomServer = require('react-dom/server')`,
     `const React = require('react')`,
@@ -1315,6 +1328,26 @@ test('element passed to React.renderToString', async ({is}) => {
     `const { createElement } = require('react')`,
     'const el = esx `<div><p>hi</p></div>`',
     `esx.renderToString(el)`
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('babel compatibility', async({ is }) => {
+  const src = [
+    'var _react = _interopRequireDefault(require("react"))',
+    'function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj } }',
+    'const App = () => _react.default.createElement("svg", {',
+    '  xmlns: "http://www.w3.org/2000/svg",',
+    '  width: "48",',
+    '  height: "48",',
+    '  "aria-hidden": "true"',
+    '}, _react.default.createElement("title", null, "Menu"))'
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    'var _react = _interopRequireDefault(require("react"))',
+    'function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj } }',
+    'const App = () => esx `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" aria-hidden="true"><title>Menu</title></svg>`'
   ].join('\n')
   is(convert(src), esx)
 })

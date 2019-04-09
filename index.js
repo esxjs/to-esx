@@ -20,9 +20,9 @@ function convert (src) {
   const components = new Set()
   const references = {
     React: new Set(),
-    createElement: new Set([]),
-    ReactDomServer: new Set([]),
-    renderToString: new Set([])
+    createElement: new Set(),
+    ReactDomServer: new Set(),
+    renderToString: new Set()
   }
   walk(ast, null, analyze)
   reactLoaded = reactLoaded || (Object.values(references).reduce((count, set) => {
@@ -81,7 +81,8 @@ function convert (src) {
       }
       if (parent.type === 'CallExpression') {
         const variable = parent.parent
-        if (variable.type === 'VariableDeclarator') {
+        const isBabel = parent.callee && parent.callee.name === '_interopRequireDefault'     
+        if (variable.type === 'VariableDeclarator' || isBabel) {
           if (required === 'esx') {
             esx = variable.id.name
             included = variable
@@ -295,24 +296,28 @@ function convert (src) {
 
   function isCreateElement (node) {
     const { callee, type } = node
-  
-    const directCall = type === 'CallExpression' && 
-      callee.type === 'MemberExpression' &&
+    if (type !== 'CallExpression') return false
+
+    const directCall = callee.type === 'MemberExpression' &&
       callee.property && callee.property.name === 'createElement' &&
       callee.object && callee.object.callee &&
       callee.object.callee.name === 'require' &&
       callee.object.arguments && callee.object.arguments[0] && 
       callee.object.arguments[0].value === 'react'
 
-    const methodCall = type === 'CallExpression' && 
-      callee.type === 'MemberExpression' && 
+    const methodCall = callee.type === 'MemberExpression' && 
       references.React.has(callee.object.name) &&
       callee.property.name === 'createElement'
-    
-    const functionCall = type === 'CallExpression' 
-      && references.createElement.has(callee.name)
 
-    return directCall || methodCall || functionCall
+    const functionCall = references.createElement.has(callee.name)
+
+    const babelDefaultInteropCall = callee.type === 'MemberExpression' &&
+      callee.object.type === 'MemberExpression' && 
+      references.React.has(callee.object.object.name) && 
+      callee.object.property.name === 'default' && 
+      callee.property.name === 'createElement'
+
+    return directCall || methodCall || functionCall || babelDefaultInteropCall
   }
   
   function isRenderToString (node) {
@@ -371,7 +376,8 @@ function convert (src) {
       const v = value.type === 'Literal' && typeof value.value !== 'boolean'
         ? `"${value.value}"`
         : `\${${source(value)}}`
-      return `${key.name}=${v}`
+      const k = key.value || key.name
+      return `${k}=${v}`
     }).join(' ')
   }
 
