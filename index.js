@@ -324,37 +324,10 @@ function convert (src) {
           if (p === null) break
           if (p.type === 'BlockStatement' || p.type === 'Program') {
             for (const n of p.body) {
-              if (path.length > 1) {
-                if (n.type === 'VariableDeclaration') {
-                  for (const d of n.declarations) {
-                    const [o] = path
-                    if (d.init && d.init.type === 'ObjectExpression' && o === d.id.name) {
-                      let cur = d.init.properties
-                      for (var i = 1; i < path.length - 1; i++) {
-                        const match = cur.find(({key}) => key.name === path[i])
-                        if (!match) {
-                          cur = null 
-                          break
-                        }
-                        cur = match.value.properties
-                      }
-                      if (cur && i === path.length - 1) {
-                        if (cur.find(({key}) => key.name === path[i])) {
-                          if (!matches.has(ref)) {
-                            nodes[index] = d
-                            declarations[index] = declarations[index] || []
-                            declarations[index].push(c)
-                            matches.add(ref)
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              if (path.length === 1 && n.type === 'VariableDeclaration') {
+              if (n.type === 'VariableDeclaration') {
                 for (const d of n.declarations) {
-                  if (d.type === 'VariableDeclarator' && d.id.name === ref) {
+                  const [ name ] = path
+                  if (d.type === 'VariableDeclarator' && d.id.name === name) {
                     if (!matches.has(ref)) {
                       nodes[index] = n
                       declarations[index] = declarations[index] || []
