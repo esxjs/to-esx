@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "NODE_OPTIONS='-r ./test/check --experimental-vm-modules --no-warnings' tap test/*.test.js",
-    "only": "TAP_ONLY=1 NODE_OPTIONS='-r ./test/check --experimental-vm-modules --no-warnings' node test/*.test.js | grep -v SKIP",
+    "only": "TAP_ONLY=1 NODE_OPTIONS='-r ./test/check --experimental-vm-modules --no-warnings' node test/index.test.js | grep -v SKIP",
     "cov": "NODE_OPTIONS='-r ./test/check --experimental-vm-modules --no-warnings' tap --100 --coverage-report=html test/*.test.js"
   },
   "keywords": [
@@ -24,7 +24,8 @@
   "license": "MIT",
   "dependencies": {
     "acorn": "^6.1.1",
-    "acorn-jsx": "^5.0.1"
+    "acorn-jsx": "^5.0.1",
+    "react": "^16.8.6"
   },
   "devDependencies": {
     "tap": "^12.0.1"

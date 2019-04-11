@@ -1,7 +1,7 @@
 'use strict'
 const { SourceTextModule } = require('vm')
 
-const check = (source) => source //new SourceTextModule(source)
+const check = (source) => new SourceTextModule(source)
 
 module.exports = check
 

@@ -1,7 +1,8 @@
 'use strict'
-const { Parser } = require('acorn')
+const { Parser, Node } = require('acorn')
 const jsxParser = Parser.extend(require('acorn-jsx')())
 const parse = jsxParser.parse.bind(jsxParser)
+const PROPERTIES_RX = /[^.[\]]+|\[(?:(\d+(?:\.\d+)?)((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(\.|\[\])(?:\4|$))/g
 module.exports = convert
 
 function convert (src) {  
@@ -11,6 +12,7 @@ function convert (src) {
     preserveParens: true
   })
   const { body } = ast
+  const [ top ] = body
   var eol = ''
   var esx = 'esx'
   var included = false
@@ -18,19 +20,21 @@ function convert (src) {
   var reactLoaded = false
   const lastLine = chunks[chunks.length - 1] === '\n' ? '\n' : ''
   const components = new Set()
+  const mappings = {}
   const references = {
     React: new Set(),
     createElement: new Set(),
     ReactDomServer: new Set(),
     renderToString: new Set()
   }
+  const isCreateElement = isserFactory({key: 'React', mod: 'react', method: 'createElement'})
+  const isRenderToString = isserFactory({key: 'ReactDomServer', mod: 'react-dom/server', method: 'renderToString'})
   walk(ast, null, analyze)
   reactLoaded = reactLoaded || (Object.values(references).reduce((count, set) => {
     return (count + set.size)
   }, 0) > 0)
   if (reactLoaded === false) return src
   walk(ast, null, transform)
-  const [ top ] = body
   if (top) {
      if (included === false) { 
        update(top, 
@@ -174,9 +178,9 @@ function convert (src) {
 
   function jsx (node) {
     const { type, name, parent } = node
-    
-    if (type === 'JSXElement') {
-      const isRoot = parent.type !== 'JSXElement'
+
+    if (type === 'JSXElement' || type === 'JSXFragment') {
+      const isRoot = parent.type !== 'JSXElement' && parent.type !== 'JSXFragment'
       if (isRoot) {
         if (isRenderToString(parent)) {
           esxBlock(node, '')
@@ -194,6 +198,7 @@ function convert (src) {
     }
     if (type === 'JSXMemberExpression' && parent.type === 'JSXOpeningElement') {
       const expr = source(node)
+      mappings[`"${expr}": ${expr}`] = expr
       components.add(`"${expr}": ${expr}`)
     }
     if (type === 'JSXSpreadAttribute') {
@@ -237,7 +242,10 @@ function convert (src) {
         }
       }
       if (canShorthand) components.add(ref)
-      else components.add(`"${mapping}": ${ref}`)
+      else {
+        mappings[`"${mapping}": ${ref}`] = ref
+        components.add(`"${mapping}": ${ref}`)
+      }
     }
     const attributes = props == null || props.type === 'Literal' ? '' : propsToAttributes(props)
     if (props) blank(props.start, props.end)
@@ -267,6 +275,23 @@ function convert (src) {
     }
   }
 
+  function seek (array, pos, rx) {
+    var i = pos - 1
+    const end = array.length - 1
+    while (i++ < end) {
+      if (rx.test(array[i])) return i
+    }
+    return -1
+  }
+
+  function reverseSeek (array, pos, rx) {
+    var i = pos
+    while (i--) {
+      if (rx.test(array[i])) return i
+    }
+    return -1
+  }
+
   function esxBlock (node, tag = esx) {
     const { start, end } = node 
     if (node.parent.type === 'ParenthesizedExpression') {
@@ -280,68 +305,115 @@ function convert (src) {
       }
     }
     chunks[start] = tag + ' `' + chunks[start]
-    chunks[end] = '`' + (chunks[end] || '')
-    const registrations = Array.from(components)
-    if (registrations.length > 0) {
-      let p = node.parent
-      let outerScope
-      while (p = p.parent) {
-        if (p.type === 'Program') break
-        outerScope = p
+    const lastElPos = reverseSeek(chunks, end, />$/)
+    const blockEnd = lastElPos > -1 ? lastElPos: end
+    chunks[blockEnd] = chunks[blockEnd] + '`'
+    const matches = new Set()
+
+    if (components.size > 0) {
+      let p = node
+      let index = 0
+      const nodes = []
+      const declarations = []
+      for (const c of components) {
+        const ref = mappings[c] || c
+        const path = ref.match(PROPERTIES_RX).map((p) => {
+          return p.replace(/^['|"|`]|['|"|`]$/g, '')
+        }) || []
+        do {
+          if (p === null) break
+          if (p.type === 'BlockStatement' || p.type === 'Program') {
+            for (const n of p.body) {
+              if (path.length > 1) {
+                if (n.type === 'VariableDeclaration') {
+                  for (const d of n.declarations) {
+                    const [o] = path
+                    if (d.init && d.init.type === 'ObjectExpression' && o === d.id.name) {
+                      let cur = d.init.properties
+                      for (var i = 1; i < path.length - 1; i++) {
+                        const match = cur.find(({key}) => key.name === path[i])
+                        if (!match) {
+                          cur = null 
+                          break
+                        }
+                        cur = match.value.properties
+                      }
+                      if (cur && i === path.length - 1) {
+                        if (cur.find(({key}) => key.name === path[i])) {
+                          if (!matches.has(ref)) {
+                            nodes[index] = d
+                            declarations[index] = declarations[index] || []
+                            declarations[index].push(c)
+                            matches.add(ref)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              if (path.length === 1 && n.type === 'VariableDeclaration') {
+                for (const d of n.declarations) {
+                  if (d.type === 'VariableDeclarator' && d.id.name === ref) {
+                    if (!matches.has(ref)) {
+                      nodes[index] = n
+                      declarations[index] = declarations[index] || []
+                      declarations[index].push(c)
+                      matches.add(ref)
+                    }
+                  }
+                }
+              }
+            }
+            if (nodes[index]) index += 1
+          }
+        } while (p = p.parent)
       }
-      chunks[outerScope.start] = `${esx}.register({ ${registrations.join(', ')} })${eol}\n${chunks[outerScope.start]}`
+      for (var i = 0; i < nodes.length; i++) {
+        const node = nodes[i]
+        const edge = reverseSeek(chunks, node.start, /\n/) + 1
+        const start = seek(chunks, edge, /[^\s]/)
+        const indent = chunks.slice(edge, start).join('')
+        const cmps = declarations[i]
+
+        chunks[node.end] = `${chunks[node.end]}${indent}${esx}.register({ ${cmps.join(', ')} })${eol}\n`
+      }
       components.clear()
     }
   }
 
-  function isCreateElement (node) {
-    const { callee, type } = node
-    if (type !== 'CallExpression') return false
-
-    const directCall = callee.type === 'MemberExpression' &&
-      callee.property && callee.property.name === 'createElement' &&
-      callee.object && callee.object.callee &&
-      callee.object.callee.name === 'require' &&
-      callee.object.arguments && callee.object.arguments[0] && 
-      callee.object.arguments[0].value === 'react'
-
-    const methodCall = callee.type === 'MemberExpression' && 
-      references.React.has(callee.object.name) &&
-      callee.property.name === 'createElement'
-
-    const functionCall = references.createElement.has(callee.name)
-
-    const babelDefaultInteropCall = callee.type === 'MemberExpression' &&
-      callee.object.type === 'MemberExpression' && 
-      references.React.has(callee.object.object.name) && 
-      callee.object.property.name === 'default' && 
-      callee.property.name === 'createElement'
-
-    return directCall || methodCall || functionCall || babelDefaultInteropCall
-  }
+  function isserFactory ({key, mod, method}) {
+    return (node) => {
+      const { callee, type } = node
+      if (type !== 'CallExpression') return false
+      const expr = callee.type !== 'ParenthesizedExpression' ? 
+        callee :
+        (callee.expression.type !== 'SequenceExpression' ? 
+          callee.expression : 
+          callee.expression.expressions[callee.expression.expressions.length -1]
+        )
+      const directCall = expr.type === 'MemberExpression' &&
+        expr.property && expr.property.name === method &&
+        expr.object && expr.object.callee &&
+        expr.object.callee.name === 'require' &&
+        expr.object.arguments && expr.object.arguments[0] && 
+        expr.object.arguments[0].value === mod
   
-  function isRenderToString (node) {
-    const { callee, type } = node
+      const methodCall = expr.type === 'MemberExpression' && 
+        references[key].has(expr.object.name) &&
+        expr.property.name === method
   
-    const directCall = type === 'CallExpression' && 
-      callee.type === 'MemberExpression' &&
-      callee.property && callee.property.name === 'renderToString' &&
-      callee.object && callee.object.callee &&
-      callee.object.callee.name === 'require' &&
-      callee.object.arguments && callee.object.arguments[0] && 
-      callee.object.arguments[0].value === 'react-dom/server'
-
-    const methodCall = type === 'CallExpression' && 
-      callee.type === 'MemberExpression' && 
-      references.ReactDomServer.has(callee.object.name) &&
-      callee.property.name === 'renderToString'
-    
-    const functionCall = type === 'CallExpression' 
-      && references.renderToString.has(callee.name)
-
-    return directCall || methodCall || functionCall
+      const functionCall = references[method].has(callee.name)
+  
+      const babelDefaultInteropCall = expr.type === 'MemberExpression' &&
+        expr.object.type === 'MemberExpression' && 
+        references[key].has(expr.object.object.name) && 
+        expr.object.property.name === 'default' && 
+        expr.property.name === method
+  
+      return directCall || methodCall || functionCall || babelDefaultInteropCall
+    }
   }
-
 
   function transform (node) {
     jsx(node)
@@ -384,18 +456,24 @@ function convert (src) {
   function walk (node, parent, fn) {
     if (node === null) return
     node.parent = parent
-    Object.keys(node).forEach((key) => {
-        if (key === 'parent') return
-        const child = node[key]
-        if (Array.isArray(child)) {
-          child.forEach((c) => walk(c, node, fn))
-        } else if (child && typeof child.type === 'string') {
-          walk(child, node, fn)
+    const keys = Object.keys(node)
+    for (var i = 0; i < keys.length; i++) {
+      const key = keys[i]
+      if (key === 'parent') continue
+      const child = node[key]
+      if (Array.isArray(child)) {
+        const childKeys = Object.keys(child)
+        for (var c = 0; c < childKeys.length; c++) {
+          walk(child[childKeys[c]], node, fn)
         }
-    })
+      } else if (child && child instanceof Node) {
+        walk(child, node, fn)
+      }
+    }
+
     fn(node)
   }
-}
+
 
 function escape (str, char = '"') {
   var result = ''
@@ -413,4 +491,5 @@ function escape (str, char = '"') {
   if (last === 0) return str 
   result += str.slice(last)
   return result
+}
 }
