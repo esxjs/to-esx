@@ -82,6 +82,40 @@ test('JSX basic - no parens, semi-colons', async ({is}) => {
   is(convert(src), esx)
 })
 
+test('JSX basic - multiline', async ({is}) => {
+  const src = [
+    `const React = require('react')`,
+    'module.exports = () => (',
+    '  <div><p>hi</p></div>',
+    ')'
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const React = require('react')`,
+    'module.exports = () => esx `',
+    '  <div><p>hi</p></div>',
+    '`'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('JSX basic - multiline, semi-colon', async ({is}) => {
+  const src = [
+    `const React = require('react');`,
+    'module.exports = () => (',
+    '  <div><p>hi</p></div>',
+    ');'
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')();`,
+    `const React = require('react');`,
+    'module.exports = () => esx `',
+    '  <div><p>hi</p></div>',
+    '`;'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
 test('JSX child expression', async ({is}) => {
   const src = [
     `const React = require('react')`,

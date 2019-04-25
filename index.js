@@ -293,10 +293,13 @@ function convert (src) {
   }
 
   function esxBlock (node, tag = esx) {
-    const { start, end } = node 
-    if (node.parent.type === 'ParenthesizedExpression') {
+    let { start, end } = node
+    const inParens = node.parent.type === 'ParenthesizedExpression'
+    if (inParens) {
       chunks[node.parent.start] = ''
       chunks[node.parent.end - 1] = ''
+      start = node.parent.start
+      end = node.parent.end - 1
     }
     if (node.parent.type === 'CallExpression') {
       if (isRenderToString(node.parent)) {
@@ -306,7 +309,7 @@ function convert (src) {
     }
     chunks[start] = tag + ' `' + chunks[start]
     const lastElPos = reverseSeek(chunks, end, />$/)
-    const blockEnd = lastElPos > -1 ? lastElPos: end
+    const blockEnd = inParens ? end - 1 : lastElPos > -1 ? lastElPos: end
     chunks[blockEnd] = chunks[blockEnd] + '`'
     const matches = new Set()
 
