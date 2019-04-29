@@ -247,6 +247,29 @@ test('JSX multiple levels of component registration (import)', async ({is}) => {
   is(convert(src), esx)
 })
 
+test('JSX registration of nested component tree', async ({ is }) => {
+  const src = [
+    'const { createElement } = require("react")',
+    'const A = require("A")',
+    'const B = require("B")',
+    'function AppShell () {',
+    '  return <A><B/></A>',
+    '}'
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    'const { createElement } = require("react")',
+    'const A = require("A")',
+    'esx.register({ A })',
+    'const B = require("B")',
+    'esx.register({ B })',
+    'function AppShell () {',
+    '  return esx `<A><B/></A>`',
+    '}'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
 test('JSX inlined interpolated template string expression', async ({is}) => {
   const src = [
     `const React = require('react')`,
@@ -525,6 +548,29 @@ test('createElement component registration - non-PascalCase tag', async ({is}) =
     `const foo = require('./foo')`,
     'esx.register({ "$foo": foo })',
     'module.exports = () => esx `<div><$foo>hi</$foo></div>`',
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('createElement registration of nested component tree', async ({ is }) => {
+  const src = [
+    'const { createElement } = require("react")',
+    'const A = require("A")',
+    'const B = require("B")',
+    'function AppShell () {',
+    '  return createElement(A, null, createElement(B))',
+    '}'
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    'const { createElement } = require("react")',
+    'const A = require("A")',
+    'esx.register({ A })',
+    'const B = require("B")',
+    'esx.register({ B })',
+    'function AppShell () {',
+    '  return esx `<A><B/></A>`',
+    '}'
   ].join('\n')
   is(convert(src), esx)
 })
@@ -1587,3 +1633,9 @@ test('variable assignment with comma operator', async  ({ is }) => {
 //   ].join('\n')
 //   is(convert(src), esx)
 // })
+
+
+//todo -> children array, merge into one string
+//todo -> leading comma in child params
+//todo whitespace for closing tags
+//todo - swap/dynamic cmps

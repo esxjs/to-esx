@@ -314,11 +314,11 @@ function convert (src) {
     const matches = new Set()
 
     if (components.size > 0) {
-      let p = node
       let index = 0
       const nodes = []
       const declarations = []
       for (const c of components) {
+        let p = node
         const ref = mappings[c] || c
         const path = ref.match(PROPERTIES_RX).map((p) => {
           return p.replace(/^['|"|`]|['|"|`]$/g, '')
@@ -351,7 +351,6 @@ function convert (src) {
         const start = seek(chunks, edge, /[^\s]/)
         const indent = chunks.slice(edge, start).join('')
         const cmps = declarations[i]
-
         chunks[node.end] = `${chunks[node.end]}${indent}${esx}.register({ ${cmps.join(', ')} })${eol}\n`
       }
       components.clear()

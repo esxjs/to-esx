@@ -4,7 +4,7 @@
   "description": "Converts JSX and `React.createElement` into [esx](https://github.com/esxjs/esx)",
   "main": "index.js",
   "bin": {
-    "jsx-to-esx": "./cmd.js"
+    "to-esx": "./cmd.js"
   },
   "scripts": {
     "test": "NODE_OPTIONS='-r ./test/check --experimental-vm-modules --no-warnings' tap test/*.test.js",
