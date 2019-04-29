@@ -5,7 +5,7 @@ const parse = jsxParser.parse.bind(jsxParser)
 const PROPERTIES_RX = /[^.[\]]+|\[(?:(\d+(?:\.\d+)?)((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(\.|\[\])(?:\4|$))/g
 module.exports = convert
 
-function convert (src) {  
+function convert (src) {
   const chunks = src.split('')
   const ast = parse(src, {
     allowImportExportEverywhere: true,
@@ -27,8 +27,8 @@ function convert (src) {
     ReactDomServer: new Set(),
     renderToString: new Set()
   }
-  const isCreateElement = isserFactory({key: 'React', mod: 'react', method: 'createElement'})
-  const isRenderToString = isserFactory({key: 'ReactDomServer', mod: 'react-dom/server', method: 'renderToString'})
+  const isCreateElement = isserFactory({ key: 'React', mod: 'react', method: 'createElement' })
+  const isRenderToString = isserFactory({ key: 'ReactDomServer', mod: 'react-dom/server', method: 'renderToString' })
   walk(ast, null, analyze)
   reactLoaded = reactLoaded || (Object.values(references).reduce((count, set) => {
     return (count + set.size)
@@ -36,11 +36,11 @@ function convert (src) {
   if (reactLoaded === false) return src
   walk(ast, null, transform)
   if (top) {
-     if (included === false) { 
-       update(top, 
-        'directive' in top ? 
-          `${source(top)}\nconst ${esx} = require('esx')()${eol}\n` : 
-          `const ${esx} = require('esx')()${eol}\n${source(top)}`
+    if (included === false) {
+      update(top,
+        'directive' in top
+          ? `${source(top)}\nconst ${esx} = require('esx')()${eol}\n`
+          : `const ${esx} = require('esx')()${eol}\n${source(top)}`
       )
     } else if (initialized === false) {
       update(included, `${source(included)}()`)
@@ -85,7 +85,7 @@ function convert (src) {
       }
       if (parent.type === 'CallExpression') {
         const variable = parent.parent
-        const isBabel = parent.callee && parent.callee.name === '_interopRequireDefault'     
+        const isBabel = parent.callee && parent.callee.name === '_interopRequireDefault'
         if (variable.type === 'VariableDeclarator' || isBabel) {
           if (required === 'esx') {
             esx = variable.id.name
@@ -115,7 +115,7 @@ function convert (src) {
           if ('name' in variable.id) { // default export:
             references.React.add(variable.id.name)
           } else if (variable.id.type === 'ObjectPattern') { // deconstructed
-            variable.id.properties.forEach(({key, value}) => {
+            variable.id.properties.forEach(({ key, value }) => {
               if (key.name === 'createElement') {
                 references.createElement.add(value.name)
               }
@@ -126,7 +126,7 @@ function convert (src) {
           if ('name' in variable.id) { // default export:
             references.ReactDomServer.add(variable.id.name)
           } else if (variable.id.type === 'ObjectPattern') { // deconstructed
-            variable.id.properties.forEach(({key, value}) => {
+            variable.id.properties.forEach(({ key, value }) => {
               if (key.name === 'renderToString') {
                 references.renderToString.add(value.name)
               }
@@ -168,7 +168,7 @@ function convert (src) {
   function findAssignedNamespace (ns) {
     var result = null
     walk(ast, null, (node) => {
-      const { type, name, parent } = node 
+      const { type, name, parent } = node
       if (name === ns && type === 'Identifier' && parent.type === 'CallExpression') {
         result = parent.parent.id.name
       }
@@ -187,7 +187,6 @@ function convert (src) {
           blank(parent.callee.start, parent.callee.end)
         } else {
           esxBlock(node)
-          
         }
       }
     }
@@ -250,21 +249,23 @@ function convert (src) {
     const attributes = props == null || props.type === 'Literal' ? '' : propsToAttributes(props)
     if (props) blank(props.start, props.end)
     blank(node.start, tag.start)
-    node.arguments.forEach(({end}, i, self) => {
+    node.arguments.forEach(({ end }, i, self) => {
       if (self[i + 1]) blank(end, self[i + 1].start)
     })
-    
+
     update(tag, `<${label}${attributes ? ` ${attributes}` : ''}${sC ? '/' : ''}>`)
     chunks[node.end - 1] = sC ? '' : `</${label}>`
-    if (!sC) children.forEach((child) => {
-      if (child.type === 'Literal') update(child, child.value)
-      else {
-        if (isCreateElement(child) === false) {
-          chunks[child.start] = '${' + chunks[child.start]
-          chunks[child.end - 1] = chunks[child.end - 1] + '}'
+    if (!sC) {
+      children.forEach((child) => {
+        if (child.type === 'Literal') update(child, child.value)
+        else {
+          if (isCreateElement(child) === false) {
+            chunks[child.start] = '${' + chunks[child.start]
+            chunks[child.end - 1] = chunks[child.end - 1] + '}'
+          }
         }
-      }
-    })
+      })
+    }
     const isRoot = node.parent.type !== 'CallExpression'
     const isInRenderToString = isRenderToString(node.parent)
     if (isRoot) {
@@ -309,7 +310,7 @@ function convert (src) {
     }
     chunks[start] = tag + ' `' + chunks[start]
     const lastElPos = reverseSeek(chunks, end, />$/)
-    const blockEnd = inParens ? end - 1 : lastElPos > -1 ? lastElPos: end
+    const blockEnd = inParens ? end - 1 : lastElPos > -1 ? lastElPos : end
     chunks[blockEnd] = chunks[blockEnd] + '`'
     const matches = new Set()
 
@@ -330,7 +331,10 @@ function convert (src) {
               if (n.type === 'VariableDeclaration') {
                 for (const d of n.declarations) {
                   const [ name ] = path
-                  if (d.type === 'VariableDeclarator' && d.id.name === name) {
+                  const found = d.id.properties
+                    ? d.id.properties.find(({ value }) => value.name === name)
+                    : d.type === 'VariableDeclarator' && d.id.name === name
+                  if (found) {
                     if (!matches.has(ref)) {
                       nodes[index] = n
                       declarations[index] = declarations[index] || []
@@ -351,41 +355,50 @@ function convert (src) {
         const start = seek(chunks, edge, /[^\s]/)
         const indent = chunks.slice(edge, start).join('')
         const cmps = declarations[i]
-        chunks[node.end] = `${chunks[node.end]}${indent}${esx}.register({ ${cmps.join(', ')} })${eol}\n`
+        if (cmps.length === 1) {
+          const [ cmp ] = cmps
+          if (/:/.test(cmp)) {
+            chunks[node.end] = `${chunks[node.end]}${indent}${esx}.register.one.lax(${cmp.replace(':', ',')})${eol}\n`
+          } else {
+            chunks[node.end] = `${chunks[node.end]}${indent}${esx}.register.one.lax("${cmp}", ${cmp})${eol}\n`
+          }
+        } else {
+          chunks[node.end] = `${chunks[node.end]}${indent}${esx}.register.lax({ ${cmps.join(', ')} })${eol}\n`
+        }
       }
       components.clear()
     }
   }
 
-  function isserFactory ({key, mod, method}) {
+  function isserFactory ({ key, mod, method }) {
     return (node) => {
       const { callee, type } = node
       if (type !== 'CallExpression') return false
-      const expr = callee.type !== 'ParenthesizedExpression' ? 
-        callee :
-        (callee.expression.type !== 'SequenceExpression' ? 
-          callee.expression : 
-          callee.expression.expressions[callee.expression.expressions.length -1]
+      const expr = callee.type !== 'ParenthesizedExpression'
+        ? callee
+        : (callee.expression.type !== 'SequenceExpression'
+          ? callee.expression
+          : callee.expression.expressions[callee.expression.expressions.length - 1]
         )
       const directCall = expr.type === 'MemberExpression' &&
         expr.property && expr.property.name === method &&
         expr.object && expr.object.callee &&
         expr.object.callee.name === 'require' &&
-        expr.object.arguments && expr.object.arguments[0] && 
+        expr.object.arguments && expr.object.arguments[0] &&
         expr.object.arguments[0].value === mod
-  
-      const methodCall = expr.type === 'MemberExpression' && 
+
+      const methodCall = expr.type === 'MemberExpression' &&
         references[key].has(expr.object.name) &&
         expr.property.name === method
-  
+
       const functionCall = references[method].has(callee.name)
-  
+
       const babelDefaultInteropCall = expr.type === 'MemberExpression' &&
-        expr.object.type === 'MemberExpression' && 
-        references[key].has(expr.object.object.name) && 
-        expr.object.property.name === 'default' && 
+        expr.object.type === 'MemberExpression' &&
+        references[key].has(expr.object.object.name) &&
+        expr.object.property.name === 'default' &&
         expr.property.name === method
-  
+
       return directCall || methodCall || functionCall || babelDefaultInteropCall
     }
   }
@@ -419,7 +432,7 @@ function convert (src) {
       return `...\${${source(props)}}`
     }
     const { properties } = props
-    return properties.map(({key, value}) => {
+    return properties.map(({ key, value }) => {
       const v = value.type === 'Literal' && typeof value.value !== 'boolean'
         ? `"${value.value}"`
         : `\${${source(value)}}`
@@ -449,22 +462,21 @@ function convert (src) {
     fn(node)
   }
 
-
-function escape (str, char = '"') {
-  var result = ''
-  var last = 0
-  var point = 0
-  const l = str.length
-  const code = char.charCodeAt(0)
-  for (var i = 0; i < l; i++) {
-    point = str.charCodeAt(i)
-    if (point === code) {
-      result += str.slice(last, i) + '\\' 
-      last = i
+  function escape (str, char = '"') {
+    var result = ''
+    var last = 0
+    var point = 0
+    const l = str.length
+    const code = char.charCodeAt(0)
+    for (var i = 0; i < l; i++) {
+      point = str.charCodeAt(i)
+      if (point === code) {
+        result += str.slice(last, i) + '\\'
+        last = i
+      }
     }
+    if (last === 0) return str
+    result += str.slice(last)
+    return result
   }
-  if (last === 0) return str 
-  result += str.slice(last)
-  return result
-}
 }
