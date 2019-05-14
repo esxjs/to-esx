@@ -1,5 +1,7 @@
 'use strict'
 const { test, only } = require('tap')
+const { readFileSync } = require('fs')
+const { join } = require('path')
 const toEsx = require('..')
 const check = require('./check')
 const convert = (source) => {
@@ -1628,6 +1630,16 @@ test('variable assignment with comma operator', async ({ is }) => {
     `  esx.register.one.lax("Component", Component);`,
     '  return esx `<Component ...${props}>${children}</Component>`;',
     `}`
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('minified code – registration injection', async ({ is }) => {
+  const src = `var React=_interopDefault(require("react")),reactRouter=require("react-router"),history=require("history");require("prop-types");const el = React.createElement(reactRouter)`
+  const esx = [
+    `const esx = require('esx')();`,
+    'var React=_interopDefault(require("react")),reactRouter=require("react-router"),history=require("history");',
+    'esx.register.one.lax("$reactRouter", reactRouter);require("prop-types");const el = esx `<$reactRouter/>`'
   ].join('\n')
   is(convert(src), esx)
 })

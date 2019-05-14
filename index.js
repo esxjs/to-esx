@@ -355,16 +355,23 @@ function convert (src) {
         const start = seek(chunks, edge, /[^\s]/)
         const indent = chunks.slice(edge, start).join('')
         const cmps = declarations[i]
+        const ch = chunks[node.end]
         if (cmps.length === 1) {
           const [ cmp ] = cmps
           if (/:/.test(cmp)) {
-            chunks[node.end] = `${chunks[node.end]}${indent}${esx}.register.one.lax(${cmp.replace(':', ',')})${eol}\n`
+            chunks[node.end] = `\n${indent}${esx}.register.one.lax(${cmp.replace(':', ',')})`
           } else {
-            chunks[node.end] = `${chunks[node.end]}${indent}${esx}.register.one.lax("${cmp}", ${cmp})${eol}\n`
+            chunks[node.end] = `\n${indent}${esx}.register.one.lax("${cmp}", ${cmp})`
           }
         } else {
-          chunks[node.end] = `${chunks[node.end]}${indent}${esx}.register.lax({ ${cmps.join(', ')} })${eol}\n`
+          chunks[node.end] = `\n${indent}${esx}.register.lax({ ${cmps.join(', ')} })`
         }
+        if (eol) {
+          if (chunks[node.end].slice(-1) === '\n' && chunks[node.end].slice(-2) !== ';') {
+            chunks[node.end] = `${chunks[node.end].slice(0, -1)}${eol}\n`
+          } else chunks[node.end] += eol
+        }
+        chunks[node.end] += ch
       }
       components.clear()
     }
