@@ -269,11 +269,14 @@ function convert (src) {
     }
     const isRoot = node.parent.type !== 'CallExpression'
     const isInRenderToString = isRenderToString(node.parent)
-    if (isRoot) {
+    const isFnArg = !isRoot && !isInRenderToString && !isCreateElement(node.parent)
+    if (isFnArg || isRoot) {
       esxBlock(node)
     } else if (isInRenderToString) {
       esxBlock(node, '')
       blank(node.parent.callee.start, node.parent.callee.end)
+    } else {
+
     }
   }
 
