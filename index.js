@@ -9,7 +9,8 @@ function convert (src) {
   const chunks = src.split('')
   const ast = parse(src, {
     allowImportExportEverywhere: true,
-    preserveParens: true
+    preserveParens: true,
+    allowHashBang: true
   })
   const { body } = ast
   const [ top ] = body
