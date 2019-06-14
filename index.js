@@ -297,6 +297,26 @@ function convert (src) {
     return -1
   }
 
+  function findArg (params, name) {
+    for (const param of params) {
+      const found = (param.name === name && param) || (
+        param.properties && param.properties.find(function match({value}) {
+          if (value.type === 'ObjectPattern') {
+            return value.properties.find(match)
+          }
+          return value.name === name
+        })
+      )
+      if (found) return found
+    }
+  }
+
+  function hasVar ({id, type}, name) {
+    return id.properties
+      ? id.properties.find(({ value }) => value.name === name)
+      : type === 'VariableDeclarator' && id.name === name
+  }
+
   function esxBlock (node, tag = esx) {
     let { start, end } = node
     const inParens = node.parent.type === 'ParenthesizedExpression'
@@ -312,16 +332,14 @@ function convert (src) {
         chunks[node.parent.end - 1] = ''
       }
     }
-    chunks[start] = tag + ' `' + chunks[start]
-    const lastElPos = reverseSeek(chunks, end, />$/)
-    const blockEnd = inParens ? end - 1 : lastElPos > -1 ? lastElPos : end
-    chunks[blockEnd] = chunks[blockEnd] + '`'
     const matches = new Set()
-
+    var inlineRegistrations = ''
+    const rootScopeComponents = []
     if (components.size > 0) {
       let index = 0
       const nodes = []
       const declarations = []
+      let lastRootScopeNode = null
       for (const c of components) {
         let p = node
         const ref = mappings[c] || c
@@ -332,53 +350,71 @@ function convert (src) {
           if (p === null) break
           if (p.type === 'BlockStatement' || p.type === 'Program') {
             for (const n of p.body) {
+              let found = false
+              const [ name ] = path
               if (n.type === 'VariableDeclaration') {
                 for (const d of n.declarations) {
-                  const [ name ] = path
-                  const found = d.id.properties
-                    ? d.id.properties.find(({ value }) => value.name === name)
-                    : d.type === 'VariableDeclarator' && d.id.name === name
-                  if (found) {
-                    if (!matches.has(ref)) {
-                      nodes[index] = n
-                      declarations[index] = declarations[index] || []
-                      declarations[index].push(c)
-                      matches.add(ref)
-                    }
-                  }
+                  found = (hasVar(d, name) && n) || 
+                    (d.init && d.init.params && findArg(d.init.params, name))
+
+                  if (found) break
                 }
+              } else if (n.type === 'FunctionDeclaration' && n.params.length) {
+                found = findArg(n.params, name)
+              } 
+              if (found) {
+                if (!matches.has(ref)) {
+                  nodes[index] = found
+                  declarations[index] = declarations[index] || []
+                  declarations[index].push(c)
+                  matches.add(ref)
+                }
+                break
               }
             }
             if (nodes[index]) index += 1
           }
         } while (p = p.parent)
       }
+
       for (var i = 0; i < nodes.length; i++) {
         const node = nodes[i]
-        const edge = reverseSeek(chunks, node.start, /\n/) + 1
-        const start = seek(chunks, edge, /[^\s]/)
-        const indent = chunks.slice(edge, start).join('')
         const cmps = declarations[i]
-        const ch = chunks[node.end]
-        if (cmps.length === 1) {
-          const [ cmp ] = cmps
-          if (/:/.test(cmp)) {
-            chunks[node.end] = `\n${indent}${esx}.register.one.lax(${cmp.replace(':', ',')})`
+        for (const cmp of cmps) {
+          if (node.parent.type !== 'Program') {
+            inlineRegistrations += /:/.test(cmp) ? 
+              `._r(${cmp.replace(':', ',')})` :
+              `._r("${cmp}", ${cmp})`
           } else {
-            chunks[node.end] = `\n${indent}${esx}.register.one.lax("${cmp}", ${cmp})`
+            if (lastRootScopeNode) {
+              if (node.end > lastRootScopeNode.end) {
+                lastRootScopeNode = node
+                rootScopeComponents.push(cmp)
+              } else {
+                rootScopeComponents.unshift(cmp)
+              }
+            } else {
+              lastRootScopeNode = node
+              rootScopeComponents.unshift(cmp)
+            }
           }
-        } else {
-          chunks[node.end] = `\n${indent}${esx}.register.lax({ ${cmps.join(', ')} })`
         }
-        if (eol) {
-          if (chunks[node.end].slice(-1) === '\n' && chunks[node.end].slice(-2) !== ';') {
-            chunks[node.end] = `${chunks[node.end].slice(0, -1)}${eol}\n`
-          } else chunks[node.end] += eol
-        }
-        chunks[node.end] += ch
+      }
+      if (lastRootScopeNode) {
+        const { end } = lastRootScopeNode
+        const pos = end - 1
+        if (chunks[end] === '\n') chunks[pos] += '\n'
+        chunks[pos] += `esx.register({ ${rootScopeComponents.join(', ')} })`
+        if (eol) chunks[pos] += eol
       }
       components.clear()
     }
+
+    chunks[start] = tag + inlineRegistrations + ' `' + chunks[start]
+    const lastElPos = reverseSeek(chunks, end, />$/)
+    const blockEnd = inParens ? end - 1 : lastElPos > -1 ? lastElPos : end
+    chunks[blockEnd] = chunks[blockEnd] + '`'
+
   }
 
   function isserFactory ({ key, mod, method }) {

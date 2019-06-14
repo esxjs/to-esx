@@ -169,7 +169,7 @@ test('JSX component registration – function', async ({ is }) => {
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const Foo = require('./foo')`,
-    'esx.register.one.lax("Foo", Foo)',
+    'esx.register({ Foo })',
     'module.exports = () => esx `<div><Foo>hi</Foo></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -185,7 +185,7 @@ test('JSX registration of components via member expression', async ({ is }) => {
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {Foo: require('./foo')}`,
-    `esx.register.one.lax("o.Foo", o.Foo)`,
+    `esx.register({ "o.Foo": o.Foo })`,
     'module.exports = () => esx `<div><o.Foo>hi</o.Foo></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -201,7 +201,7 @@ test('JSX registration of components via member expression multilevel', async ({
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {x: { Foo: require('./foo')}}`,
-    `esx.register.one.lax("o.x.Foo", o.x.Foo)`,
+    `esx.register({ "o.x.Foo": o.x.Foo })`,
     'module.exports = () => esx `<div><o.x.Foo>hi</o.x.Foo></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -220,9 +220,9 @@ test('JSX multiple levels of component registration', async ({ is }) => {
     `const lib = require('./lib')`,
     `const React = require('react')`,
     'const Bar = ({children}) => esx `<div>${children}</div>`',
-    'esx.register.one.lax("Bar", Bar)',
+    'esx.register({ Bar })',
     'const Foo = ({val}) => esx `<Bar>${val}</Bar>`',
-    'esx.register.one.lax("Foo", Foo)',
+    'esx.register({ Foo })',
     'module.exports = (props) => esx `<div><Foo val=${props.val}/></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -241,9 +241,9 @@ test('JSX multiple levels of component registration (import)', async ({ is }) =>
     `import lib from 'lib'`,
     `import React from 'react'`,
     'const Bar = ({children}) => esx `<div>${children}</div>`',
-    'esx.register.one.lax("Bar", Bar)',
+    'esx.register({ Bar })',
     'const Foo = ({val}) => esx `<Bar>${val}</Bar>`',
-    'esx.register.one.lax("Foo", Foo)',
+    'esx.register({ Foo })',
     'module.exports = (props) => esx `<div><Foo val=${props.val}/></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -262,11 +262,48 @@ test('JSX registration of nested component tree', async ({ is }) => {
     `const esx = require('esx')()`,
     'const React = require("react")',
     'const A = require("A")',
-    'esx.register.one.lax("A", A)',
     'const B = require("B")',
-    'esx.register.one.lax("B", B)',
+    'esx.register({ A, B })',
     'function AppShell () {',
     '  return esx `<A><B/></A>`',
+    '}'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('JSX inline registration', async ({ is }) => {
+  const src = [
+    'const React = require("react")',
+    'function AppShell (props) {',
+    '  const { Component } = props',
+    '  return <Component/>',
+    '}'
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    'const React = require("react")',
+    'function AppShell (props) {',
+    '  const { Component } = props',
+    '  return esx._r("Component", Component) `<Component/>`',
+    '}'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('JSX multiple inline components registration', async ({ is }) => {
+  const src = [
+    'const React = require("react")',
+    'function AppShell (props) {',
+    '  const { A, B } = props',
+    '  return <div><A/><B/></div>',
+    '}'
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    'const React = require("react")',
+    'function AppShell (props) {',
+    '  const { A, B } = props',
+    '  return esx._r("A", A)._r("B", B) `<div><A/><B/></div>`',
     '}'
   ].join('\n')
   is(convert(src), esx)
@@ -285,8 +322,7 @@ test('JSX registration of destructured assignment', async ({ is }) => {
     'const React = require("react")',
     'function AppShell (props) {',
     '  const { component: Component } = props',
-    '  esx.register.one.lax("Component", Component)',
-    '  return esx `<Component/>`',
+    '  return esx._r("Component", Component) `<Component/>`',
     '}'
   ].join('\n')
   is(convert(src), esx)
@@ -552,7 +588,7 @@ test('createElement component registration', async ({ is }) => {
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const Foo = require('./foo')`,
-    'esx.register.one.lax("Foo", Foo)',
+    'esx.register({ Foo })',
     'module.exports = () => esx `<div><Foo>hi</Foo></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -568,7 +604,7 @@ test('createElement component registration - non-PascalCase tag', async ({ is })
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const foo = require('./foo')`,
-    'esx.register.one.lax("$foo", foo)',
+    'esx.register({ "$foo": foo })',
     'module.exports = () => esx `<div><$foo>hi</$foo></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -587,11 +623,48 @@ test('createElement registration of nested component tree', async ({ is }) => {
     `const esx = require('esx')()`,
     'const { createElement } = require("react")',
     'const A = require("A")',
-    'esx.register.one.lax("A", A)',
     'const B = require("B")',
-    'esx.register.one.lax("B", B)',
+    'esx.register({ A, B })',
     'function AppShell () {',
     '  return esx `<A><B/></A>`',
+    '}'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('createElement inline registration', async ({ is }) => {
+  const src = [
+    'const React = require("react")',
+    'function AppShell (props) {',
+    '  const { Component } = props',
+    '  return React.createElement(Component)',
+    '}'
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    'const React = require("react")',
+    'function AppShell (props) {',
+    '  const { Component } = props',
+    '  return esx._r("Component", Component) `<Component/>`',
+    '}'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('createElement multiple inline components registration', async ({ is }) => {
+  const src = [
+    'const React = require("react")',
+    'function AppShell (props) {',
+    '  const { A, B } = props',
+    '  return React.createElement("div", null, React.createElement(A), React.createElement(B))',
+    '}'
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    'const React = require("react")',
+    'function AppShell (props) {',
+    '  const { A, B } = props',
+    '  return esx._r("A", A)._r("B", B) `<div><A/><B/></div>`',
     '}'
   ].join('\n')
   is(convert(src), esx)
@@ -610,8 +683,7 @@ test('createElement registration of destructured assignment', async ({ is }) => 
     'const { createElement } = require("react")',
     'function AppShell (props) {',
     '  const { component: Component } = props',
-    '  esx.register.one.lax("Component", Component)',
-    '  return esx `<Component/>`',
+    '  return esx._r("Component", Component) `<Component/>`',
     '}'
   ].join('\n')
   is(convert(src), esx)
@@ -627,7 +699,7 @@ test('createElement registration of components via member expression', async ({ 
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {Foo: require('./foo')}`,
-    `esx.register.one.lax("o.Foo", o.Foo)`,
+    `esx.register({ "o.Foo": o.Foo })`,
     'module.exports = () => esx `<div><o.Foo>hi</o.Foo></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -643,7 +715,7 @@ test('createElement registration of components via member expression, lowercase 
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {foo: require('./foo')}`,
-    `esx.register.one.lax("o.$foo", o.foo)`,
+    `esx.register({ "o.$foo": o.foo })`,
     'module.exports = () => esx `<div><o.$foo>hi</o.$foo></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -659,7 +731,7 @@ test('createElement registration of components via member expression multilevel'
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {x: { Foo: require('./foo')}}`,
-    `esx.register.one.lax("o.x.Foo", o.x.Foo)`,
+    `esx.register({ "o.x.Foo": o.x.Foo })`,
     'module.exports = () => esx `<div><o.x.Foo>hi</o.x.Foo></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -675,7 +747,7 @@ test('createElement registration of components via member expression multilevel,
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {x: { foo: require('./foo')}}`,
-    `esx.register.one.lax("o.x.$foo", o.x.foo)`,
+    `esx.register({ "o.x.$foo": o.x.foo })`,
     'module.exports = () => esx `<div><o.x.$foo>hi</o.x.$foo></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -691,7 +763,7 @@ test('createElement registration of components via member expression (square bra
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {Foo: require('./foo')}`,
-    `esx.register.one.lax("o['Foo']", o['Foo'])`,
+    `esx.register({ "o['Foo']": o['Foo'] })`,
     'module.exports = () => esx `<div><o[\'Foo\']>hi</o[\'Foo\']></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -707,7 +779,7 @@ test('createElement registration of components via member expression (square bra
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {foo: require('./foo')}`,
-    `esx.register.one.lax("o['$foo']", o['foo'])`,
+    `esx.register({ "o['$foo']": o['foo'] })`,
     'module.exports = () => esx `<div><o[\'$foo\']>hi</o[\'$foo\']></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -723,7 +795,7 @@ test('createElement registration of components via member expression (square bra
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {Foo: require('./foo')}`,
-    `esx.register.one.lax("o[\\"Foo\\"]", o["Foo"])`,
+    `esx.register({ "o[\\"Foo\\"]": o["Foo"] })`,
     'module.exports = () => esx `<div><o["Foo"]>hi</o["Foo"]></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -739,7 +811,7 @@ test('createElement registration of components via member expression (square bra
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {foo: require('./foo')}`,
-    `esx.register.one.lax("o[\\"$foo\\"]", o["foo"])`,
+    `esx.register({ "o[\\"$foo\\"]": o["foo"] })`,
     'module.exports = () => esx `<div><o["$foo"]>hi</o["$foo"]></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -755,7 +827,7 @@ test('createElement registration of components via member expression (square bra
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {Foo: require('./foo')}`,
-    'esx.register.one.lax("o[`Foo`]", o[`Foo`])',
+    'esx.register({ "o[`Foo`]": o[`Foo`] })',
     'module.exports = () => esx `<div><o[\\`Foo\\`]>hi</o[\\`Foo\\`]></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -771,7 +843,7 @@ test('createElement registration of components via member expression (square bra
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {foo: require('./foo')}`,
-    'esx.register.one.lax("o[`$foo`]", o[`foo`])',
+    'esx.register({ "o[`$foo`]": o[`foo`] })',
     'module.exports = () => esx `<div><o[\\`$foo\\`]>hi</o[\\`$foo\\`]></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -789,7 +861,7 @@ test('createElement registration of components via member expression (square bra
 //     `const React = require('react')`,
 //     `const o = {Foo: require('./foo')}`,
 //     `const Foo = 'Foo'`,
-//     `esx.register.one.lax("o[Foo]", o[Foo])`,
+//     `esx._r("o[Foo]", o[Foo])`,
 //     'module.exports = () => esx `<div><o[Foo]>hi</o[Foo]></div>`',
 //   ].join('\n')
 //   is(convert(src), esx)
@@ -807,7 +879,7 @@ test('createElement registration of components via member expression (square bra
 //     `const React = require('react')`,
 //     `const o = {Foo: require('./foo')}`,
 //     `const foo = 'Foo'`,
-//     `esx.register.one.lax("o[$foo]", o[foo])`,
+//     `esx._r("o[$foo]", o[foo])`,
 //     'module.exports = () => esx `<div><o[$foo]>hi</o[$foo]></div>`',
 //   ].join('\n')
 //   is(convert(src), esx)
@@ -823,7 +895,7 @@ test('createElement registration of components via member expression multilevel 
     `const esx = require('esx')()`,
     `const React = require('react')`,
     `const o = {x: { Foo: require('./foo')}}`,
-    `esx.register.one.lax("o.x['Foo']", o.x['Foo'])`,
+    `esx.register({ "o.x['Foo']": o.x['Foo'] })`,
     'module.exports = () => esx `<div><o.x[\'Foo\']>hi</o.x[\'Foo\']></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -842,9 +914,9 @@ test('createElement multiple levels of component registration', async ({ is }) =
     `const lib = require('./lib')`,
     `const React = require('react')`,
     'const Bar = ({children}) => esx `<div>${children}</div>`',
-    'esx.register.one.lax("Bar", Bar)',
+    'esx.register({ Bar })',
     'const Foo = ({val}) => esx `<Bar>${val}</Bar>`',
-    'esx.register.one.lax("Foo", Foo)',
+    'esx.register({ Foo })',
     'module.exports = ({val}) => esx `<div><Foo val=${val}/></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -863,9 +935,9 @@ test('createElement multiple levels of component registration (import)', async (
     `import lib from 'lib'`,
     `import React from 'react'`,
     'const Bar = ({children}) => esx `<div>${children}</div>`',
-    'esx.register.one.lax("Bar", Bar)',
+    'esx.register({ Bar })',
     'const Foo = ({val}) => esx `<Bar>${val}</Bar>`',
-    'esx.register.one.lax("Foo", Foo)',
+    'esx.register({ Foo })',
     'module.exports = ({val}) => esx `<div><Foo val=${val}/></div>`'
   ].join('\n')
   is(convert(src), esx)
@@ -1553,8 +1625,7 @@ test('component variable assigned within component function', async ({ is }) => 
     `const { createElement } = require('react')`,
     'function App () {',
     '  const SelectedRouter = _exenv.default.canUseDOM ? _reactRouterDom.BrowserRouter : _reactRouter.Router',
-    '  esx.register.one.lax("SelectedRouter", SelectedRouter)',
-    '  return esx `<SelectedRouter>test</SelectedRouter>`',
+    '  return esx._r("SelectedRouter", SelectedRouter) `<SelectedRouter>test</SelectedRouter>`',
     '}'
   ].join('\n')
   is(convert(src), esx)
@@ -1576,8 +1647,7 @@ test('component variable assigned within nested component function', async ({ is
     'function Shell () {',
     '  const App = () => {',
     '    const SelectedRouter = _exenv.default.canUseDOM ? _reactRouterDom.BrowserRouter : _reactRouter.Router',
-    '    esx.register.one.lax("SelectedRouter", SelectedRouter)',
-    '    return esx `<SelectedRouter>test</SelectedRouter>`',
+    '    return esx._r("SelectedRouter", SelectedRouter) `<SelectedRouter>test</SelectedRouter>`',
     '  }',
     '}'
   ].join('\n')
@@ -1599,9 +1669,8 @@ test('component variable assigned above nested component function', async ({ is 
     `const { createElement } = require('react')`,
     'function Shell () {',
     '  const SelectedRouter = _exenv.default.canUseDOM ? _reactRouterDom.BrowserRouter : _reactRouter.Router',
-    '  esx.register.one.lax("SelectedRouter", SelectedRouter)',
     '  const App = () => {',
-    '    return esx `<SelectedRouter>test</SelectedRouter>`',
+    '    return esx._r("SelectedRouter", SelectedRouter) `<SelectedRouter>test</SelectedRouter>`',
     '  }',
     '}'
   ].join('\n')
@@ -1627,8 +1696,7 @@ test('variable assignment with comma operator', async ({ is }) => {
     `      Component = _this$props.component,`,
     `      childFactory = _this$props.childFactory,`,
     `      props = _objectWithoutPropertiesLoose(_this$props, ["component", "childFactory"]);`,
-    `  esx.register.one.lax("Component", Component);`,
-    '  return esx `<Component ...${props}>${children}</Component>`;',
+    '  return esx._r("Component", Component) `<Component ...${props}>${children}</Component>`;',
     `}`
   ].join('\n')
   is(convert(src), esx)
@@ -1638,8 +1706,7 @@ test('minified code – registration injection', async ({ is }) => {
   const src = `var React=_interopDefault(require("react")),reactRouter=require("react-router"),history=require("history");require("prop-types");const el = React.createElement(reactRouter)`
   const esx = [
     `const esx = require('esx')();`,
-    'var React=_interopDefault(require("react")),reactRouter=require("react-router"),history=require("history");',
-    'esx.register.one.lax("$reactRouter", reactRouter);require("prop-types");const el = esx `<$reactRouter/>`'
+    'var React=_interopDefault(require("react")),reactRouter=require("react-router"),history=require("history");esx.register({ "$reactRouter": reactRouter });require("prop-types");const el = esx `<$reactRouter/>`'
   ].join('\n')
   is(convert(src), esx)
 })
@@ -1653,6 +1720,240 @@ test('elements as function arguments', async ({ is }) => {
     `const esx = require('esx')()`,
     `const { createElement } = require("react")`,
     'fn(esx `<div/>`)'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function statement', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `function fn (Component) { return createElement(Component) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'function fn (Component) { return esx._r("Component", Component) `<Component/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function statement destructure', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `function fn ({Component}) { return createElement(Component) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'function fn ({Component}) { return esx._r("Component", Component) `<Component/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function statement destructure alias', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `function fn ({component: Component}) { return createElement(Component) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'function fn ({component: Component}) { return esx._r("Component", Component) `<Component/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function statement nested destructure', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `function fn ({cmps: {Component}}) { return createElement(Component) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'function fn ({cmps: {Component}}) { return esx._r("Component", Component) `<Component/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function statement nested destructure alias', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `function fn ({cmps: {component: Component}}) { return createElement(Component) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'function fn ({cmps: {component: Component}}) { return esx._r("Component", Component) `<Component/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function statement property lookup', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `function fn (props) { return createElement(props.A) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'function fn (props) { return esx._r("props.A", props.A) `<props.A/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function expression', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = function (Component) { return createElement(Component) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = function (Component) { return esx._r("Component", Component) `<Component/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function expression destructure', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = function ({Component}) { return createElement(Component) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = function ({Component}) { return esx._r("Component", Component) `<Component/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function expression destructure alias', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = function ({component: Component}) { return createElement(Component) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = function ({component: Component}) { return esx._r("Component", Component) `<Component/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function expression nested destructure', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = function ({cmps: {Component}}) { return createElement(Component) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = function ({cmps: {Component}}) { return esx._r("Component", Component) `<Component/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function expression nested destructure alias', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = function ({cmps: {component: Component}}) { return createElement(Component) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = function ({cmps: {component: Component}}) { return esx._r("Component", Component) `<Component/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - function expression property lookup', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = function (props) { return createElement(props.A) }`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = function (props) { return esx._r("props.A", props.A) `<props.A/>` }'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - arrow function', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = (Component) => createElement(Component)`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = (Component) => esx._r("Component", Component) `<Component/>`'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - arrow function destructure', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = ({Component}) => createElement(Component)`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = ({Component}) => esx._r("Component", Component) `<Component/>`'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - arrow function destructure alias', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = ({component: Component}) => createElement(Component)`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = ({component: Component}) => esx._r("Component", Component) `<Component/>`'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - arrow function nested destructure', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = ({cmps: {Component}}) => createElement(Component)`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = ({cmps: {Component}}) => esx._r("Component", Component) `<Component/>`'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - arrow function nested destructure alias', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = ({cmps: {component: Component}}) => createElement(Component)`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = ({cmps: {component: Component}}) => esx._r("Component", Component) `<Component/>`'
+  ].join('\n')
+  is(convert(src), esx)
+})
+
+test('inline registration of component args - arrow function property lookup', async ({ is }) => {
+  const src = [
+    `const { createElement } = require("react")`,
+    `const fn = (props) => createElement(props.A)`
+  ].join('\n')
+  const esx = [
+    `const esx = require('esx')()`,
+    `const { createElement } = require("react")`,
+    'const fn = (props) => esx._r("props.A", props.A) `<props.A/>`'
   ].join('\n')
   is(convert(src), esx)
 })
@@ -1692,7 +1993,7 @@ test('elements as function arguments', async ({ is }) => {
 //   const esx = [
 //     `const esx = require('esx')()`,
 //     `const React = require('react')`,
-//     `esx.register.one.lax("$require('./foo')", require('./foo'))`,
+//     `esx._r("$require('./foo')", require('./foo'))`,
 //     'module.exports = () => esx `<div><$require(\'./foo\')>hi</$require(\'./foo\')></div>`',
 //   ].join('\n')
 //   is(convert(src), esx)
@@ -1706,7 +2007,7 @@ test('elements as function arguments', async ({ is }) => {
 //   const esx = [
 //     `const esx = require('esx')()`,
 //     `const React = require('react')`,
-//     `esx.register.one.lax("$require(\\"./foo\\")", require("./foo"))`,
+//     `esx._r("$require(\\"./foo\\")", require("./foo"))`,
 //     'module.exports = () => esx `<div><$require("./foo")>hi</$require("./foo")></div>`',
 //   ].join('\n')
 //   is(convert(src), esx)
@@ -1720,7 +2021,7 @@ test('elements as function arguments', async ({ is }) => {
 //   const esx = [
 //     `const esx = require('esx')()`,
 //     `const React = require('react')`,
-//     `esx.register.one.lax("require('./foo').$foo", require('./foo').foo)`,
+//     `esx._r("require('./foo').$foo", require('./foo').foo)`,
 //     'module.exports = () => esx `<div><require(\'./foo\').$foo>hi</require(\'./foo\').$foo></div>`',
 //   ].join('\n')
 //   is(convert(src), esx)
