@@ -1,6 +1,6 @@
 {
   "name": "to-esx",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Converts JSX and `React.createElement` into [esx](https://github.com/esxjs/esx)",
   "main": "index.js",
   "bin": {
