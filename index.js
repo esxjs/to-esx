@@ -14,7 +14,7 @@ function convert (src) {
   })
   const { body } = ast
   const [ top ] = body
-  var eol = ''
+  const eol = ';'
   var esx = 'esx'
   var included = false
   var initialized = false
@@ -51,7 +51,6 @@ function convert (src) {
 
   function analyze (node) {
     const { type, parent, callee } = node
-    if (chunks[node.end] === ';') eol = ';'
     if (type === 'ImportDefaultSpecifier') {
       if (parent.source.value === 'esx') {
         included = true
@@ -354,14 +353,14 @@ function convert (src) {
               const [ name ] = path
               if (n.type === 'VariableDeclaration') {
                 for (const d of n.declarations) {
-                  found = (hasVar(d, name) && n) || 
+                  found = (hasVar(d, name) && n) ||
                     (d.init && d.init.params && findArg(d.init.params, name))
 
                   if (found) break
                 }
               } else if (n.type === 'FunctionDeclaration' && n.params.length) {
                 found = findArg(n.params, name)
-              } 
+              }
               if (found) {
                 if (!matches.has(ref)) {
                   nodes[index] = found
@@ -382,7 +381,7 @@ function convert (src) {
         const cmps = declarations[i]
         for (const cmp of cmps) {
           if (node.parent.type !== 'Program') {
-            inlineRegistrations += /:/.test(cmp) ? 
+            inlineRegistrations += /:/.test(cmp) ?
               `._r(${cmp.replace(':', ',')})` :
               `._r("${cmp}", ${cmp})`
           } else {
@@ -405,7 +404,7 @@ function convert (src) {
         const pos = end - 1
         if (chunks[end] === '\n') chunks[pos] += '\n'
         chunks[pos] += `esx.register({ ${rootScopeComponents.join(', ')} })`
-        if (eol) chunks[pos] += eol
+        chunks[pos] += eol
       }
       components.clear()
     }
@@ -424,8 +423,8 @@ function convert (src) {
       const expr = callee.type !== 'ParenthesizedExpression'
         ? callee
         : (callee.expression.type !== 'SequenceExpression'
-          ? callee.expression
-          : callee.expression.expressions[callee.expression.expressions.length - 1]
+            ? callee.expression
+            : callee.expression.expressions[callee.expression.expressions.length - 1]
         )
       const directCall = expr.type === 'MemberExpression' &&
         expr.property && expr.property.name === method &&
