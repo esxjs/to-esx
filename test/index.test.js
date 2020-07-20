@@ -1,14 +1,18 @@
+/* eslint-disable quotes, no-template-curly-in-string */
 'use strict'
+
 const { test, only } = require('tap')
-const { readFileSync } = require('fs')
-const { join } = require('path')
-const toEsx = require('..')
-const check = require('./check')
+// const { readFileSync } = require('fs')
+// const { join } = require('path')
+const convert = require('..')
+// const check = require('./check')
+/*
 const convert = (source) => {
   const result = toEsx(source)
   // check(result)
   return result
 }
+*/
 test.only = only
 
 test('empty files are left unmodified', async ({ is }) => {
@@ -1958,7 +1962,6 @@ test('inline registration of component args - arrow function property lookup', a
   is(convert(src), esx)
 })
 
-
 test('React.Fragment', async ({ is }) => {
   const src = [
     `const React = require("react")`,
@@ -1974,10 +1977,8 @@ test('React.Fragment', async ({ is }) => {
     `module.exports = Cmp`
   ].join('\n')
 
-
-  is(convert(src), esx);
-});
-
+  is(convert(src), esx)
+})
 
 test('Children utility', async ({ is }) => {
   const src = [
@@ -1993,8 +1994,8 @@ test('Children utility', async ({ is }) => {
     `module.exports = EnhanceChildren`
   ].join('\n')
 
-  is(convert(src), esx);
-});
+  is(convert(src), esx)
+})
 
 test('Array as children', async ({ is }) => {
   const src = [
@@ -2005,7 +2006,7 @@ test('Array as children', async ({ is }) => {
     `<li key="3">Item 3</li>,`,
     `<li key="4">Item 4</li>,`,
     `];`,
-    `module.exports = ArrayRender`,
+    `module.exports = ArrayRender`
   ].join('\n')
 
   const esx = [
@@ -2017,11 +2018,11 @@ test('Array as children', async ({ is }) => {
     'esx `<li key="3">Item 3</li>`,',
     'esx `<li key="4">Item 4</li>`,',
     `];`,
-    `module.exports = ArrayRender`,
-  ].join('\n');
+    `module.exports = ArrayRender`
+  ].join('\n')
 
-  is(convert(src), esx);
-});
+  is(convert(src), esx)
+})
 
 test('Nasty array as children', async ({ is }) => {
   const src = [
@@ -2039,7 +2040,7 @@ test('Nasty array as children', async ({ is }) => {
     `    ]}</li>,`,
     `  ]}</li>`,
     `];`,
-    `module.exports = NastyArrayRender`,
+    `module.exports = NastyArrayRender`
   ].join('\n')
 
   const esx = [
@@ -2058,20 +2059,19 @@ test('Nasty array as children', async ({ is }) => {
     '    ]}</li>`,',
     '  ]}</li>`',
     `];`,
-    `module.exports = NastyArrayRender`,
-  ].join('\n');
+    `module.exports = NastyArrayRender`
+  ].join('\n')
 
-  is(convert(src), esx);
-});
-
+  is(convert(src), esx)
+})
 
 test('Function as children', async ({ is }) => {
   const src = [
     `const React = require("react")`,
     `const Repeater = (props) => <p>{props.children("foo")}</p>`,
     'const App = () => <Repeater>{(str) => <h1>{str}</h1>}</Repeater>;',
-    `module.exports = App`,
-  ].join('\n');
+    `module.exports = App`
+  ].join('\n')
 
   const esx = [
     `const esx = require('esx')();`,
@@ -2079,19 +2079,19 @@ test('Function as children', async ({ is }) => {
     'const Repeater = (props) => esx `<p>${props.children("foo")}</p>`',
     `esx.register({ Repeater });`,
     'const App = () => esx `<Repeater>${(str) => esx `<h1>${str}</h1>`}</Repeater>`;',
-    `module.exports = App`,
-  ].join('\n');
+    `module.exports = App`
+  ].join('\n')
 
-  is(convert(src), esx);
-});
+  is(convert(src), esx)
+})
 
 test('complex case', async ({ is }) => {
-
+  /* eslint-disable no-undef, camelcase, no-unused-vars, semi, indent, object-property-newline, object-curly-newline */
   const src = (() => {
     const react_1 = __importDefault(require("react"));
     const server_1 = require("react-dom/server");
     const amphtml_context_1 = require("../lib/amphtml-context");
-    function renderDocument(Document, { dataManagerData, props, docProps, pathname, query, buildId, dynamicBuildId = false, assetPrefix, runtimeConfig, nextExport, dynamicImportsIds, dangerousAsPath, err, dev, ampPath, amphtml, hasAmp, ampMode, staticMarkup, devFiles, files, dynamicImports, }) {
+    function renderDocument (Document, { dataManagerData, props, docProps, pathname, query, buildId, dynamicBuildId = false, assetPrefix, runtimeConfig, nextExport, dynamicImportsIds, dangerousAsPath, err, dev, ampPath, amphtml, hasAmp, ampMode, staticMarkup, devFiles, files, dynamicImports }) {
       return ('<!DOCTYPE html>' +
           fn(react_1.default.createElement(amphtml_context_1.AmpModeContext.Provider, { value: ampMode },
               react_1.default.createElement(Document, Object.assign({ __NEXT_DATA__: {
@@ -2105,11 +2105,11 @@ test('complex case', async ({ is }) => {
                       runtimeConfig,
                       nextExport,
                       dynamicIds: dynamicImportsIds.length === 0 ? undefined : dynamicImportsIds,
-                      err: err ? serializeError(dev, err) : undefined,
+                      err: err ? serializeError(dev, err) : undefined
                   }, dangerousAsPath: dangerousAsPath, ampPath: ampPath, amphtml: amphtml, hasAmp: hasAmp, staticMarkup: staticMarkup, devFiles: devFiles, files: files, dynamicImports: dynamicImports, assetPrefix: assetPrefix }, docProps)))));
     }
   }).toString()
-
+  /* eslint-enable no-undef, camelcase, no-unused-vars, semi, indent, object-property-newline */
 
   const esx = [
     `const esx = require('esx')();`,
@@ -2117,7 +2117,7 @@ test('complex case', async ({ is }) => {
     `    const react_1 = __importDefault(require("react"));`,
     `    const server_1 = require("react-dom/server");`,
     `    const amphtml_context_1 = require("../lib/amphtml-context");`,
-    `    function renderDocument(Document, { dataManagerData, props, docProps, pathname, query, buildId, dynamicBuildId = false, assetPrefix, runtimeConfig, nextExport, dynamicImportsIds, dangerousAsPath, err, dev, ampPath, amphtml, hasAmp, ampMode, staticMarkup, devFiles, files, dynamicImports, }) {`,
+    `    function renderDocument (Document, { dataManagerData, props, docProps, pathname, query, buildId, dynamicBuildId = false, assetPrefix, runtimeConfig, nextExport, dynamicImportsIds, dangerousAsPath, err, dev, ampPath, amphtml, hasAmp, ampMode, staticMarkup, devFiles, files, dynamicImports }) {`,
     `      return ('<!DOCTYPE html>' +`,
     `          fn(esx._r("Document", Document)._r("amphtml_context_1.AmpModeContext.Provider", amphtml_context_1.AmpModeContext.Provider) \`<amphtml_context_1.AmpModeContext.Provider value=\${ampMode}><Document ...\${Object.assign({ __NEXT_DATA__: {`,
     `                      dataManager: dataManagerData,`,
@@ -2130,14 +2130,13 @@ test('complex case', async ({ is }) => {
     `                      runtimeConfig,`,
     `                      nextExport,`,
     `                      dynamicIds: dynamicImportsIds.length === 0 ? undefined : dynamicImportsIds,`,
-    `                      err: err ? serializeError(dev, err) : undefined,`,
+    `                      err: err ? serializeError(dev, err) : undefined`,
     `                  }, dangerousAsPath: dangerousAsPath, ampPath: ampPath, amphtml: amphtml, hasAmp: hasAmp, staticMarkup: staticMarkup, devFiles: devFiles, files: files, dynamicImports: dynamicImports, assetPrefix: assetPrefix }, docProps)}/></amphtml_context_1.AmpModeContext.Provider>\`));`,
     `    }`,
     `  }`
-  ].join('\n');
+  ].join('\n')
 
-
-  is(convert(src), esx);
+  is(convert(src), esx)
 })
 
 // test('createElement registration of components via call expression', async ({is}) => {
