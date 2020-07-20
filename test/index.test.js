@@ -1967,9 +1967,9 @@ test('React.Fragment', async ({ is }) => {
   ].join('\n')
 
   const esx = [
-    `const esx = require('esx')()`,
+    `const esx = require('esx')();`,
     `const React = require("react")`,
-    `esx.register({ "React.Fragment": React.Fragment })`,
+    `esx.register({ "React.Fragment": React.Fragment });`,
     'const Cmp = () => esx `<React.Fragment><div>Foo</div></React.Fragment>`',
     `module.exports = Cmp`
   ].join('\n')
@@ -1987,7 +1987,7 @@ test('Children utility', async ({ is }) => {
   ].join('\n')
 
   const esx = [
-    `const esx = require('esx')()`,
+    `const esx = require('esx')();`,
     `const { Children } = require("react")`,
     'const EnhanceChildren = ({ children }) => Children.map(children, (child) => esx `<>${child}</>`)',
     `module.exports = EnhanceChildren`
