@@ -1,3 +1,5 @@
+![CI](https://github.com/esx/to-esx/workflows/CI/badge.svg)
+
 # to-esx
 
 Converts JSX and `React.createElement` into [esx](https://github.com/esxjs/esx)
