@@ -1,4 +1,4 @@
-![CI](https://github.com/esx/to-esx/workflows/CI/badge.svg)
+![CI](https://github.com/esxjs/to-esx/workflows/CI/badge.svg)
 
 # to-esx
 
