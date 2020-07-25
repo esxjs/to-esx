@@ -1,10 +1,17 @@
 'use strict'
+
 const { Parser, Node } = require('acorn')
 const jsxParser = Parser.extend(require('acorn-jsx')())
 const parse = jsxParser.parse.bind(jsxParser)
 const PROPERTIES_RX = /[^.[\]]+|\[(?:(\d+(?:\.\d+)?)((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(\.|\[\])(?:\4|$))/g
+
 module.exports = convert
 
+/**
+ * Receives a JSX string and returns the ESX equivalent
+ * @param src
+ * @returns {string|*}
+ */
 function convert (src) {
   const chunks = src.split('')
   const ast = parse(src, {
@@ -13,7 +20,7 @@ function convert (src) {
     allowHashBang: true
   })
   const { body } = ast
-  const [ top ] = body
+  const [top] = body
   const eol = ';'
   var esx = 'esx'
   var included = false
@@ -279,14 +286,15 @@ function convert (src) {
     }
   }
 
-  function seek (array, pos, rx) {
-    var i = pos - 1
-    const end = array.length - 1
-    while (i++ < end) {
-      if (rx.test(array[i])) return i
-    }
-    return -1
-  }
+  // I'm commenting the following seek function since it's not used within the code (yet?)
+  // function seek (array, pos, rx) {
+  //   var i = pos - 1
+  //  const end = array.length - 1
+  //  while (i++ < end) {
+  //    if (rx.test(array[i])) return i
+  //  }
+  //  return -1
+  // }
 
   function reverseSeek (array, pos, rx) {
     var i = pos
@@ -299,7 +307,7 @@ function convert (src) {
   function findArg (params, name) {
     for (const param of params) {
       const found = (param.name === name && param) || (
-        param.properties && param.properties.find(function match({value}) {
+        param.properties && param.properties.find(function match ({ value }) {
           if (value.type === 'ObjectPattern') {
             return value.properties.find(match)
           }
@@ -310,7 +318,7 @@ function convert (src) {
     }
   }
 
-  function hasVar ({id, type}, name) {
+  function hasVar ({ id, type }, name) {
     return id.properties
       ? id.properties.find(({ value }) => value.name === name)
       : type === 'VariableDeclarator' && id.name === name
@@ -350,7 +358,7 @@ function convert (src) {
           if (p.type === 'BlockStatement' || p.type === 'Program') {
             for (const n of p.body) {
               let found = false
-              const [ name ] = path
+              const [name] = path
               if (n.type === 'VariableDeclaration') {
                 for (const d of n.declarations) {
                   found = (hasVar(d, name) && n) ||
@@ -373,6 +381,7 @@ function convert (src) {
             }
             if (nodes[index]) index += 1
           }
+          // eslint-disable-next-line no-cond-assign
         } while (p = p.parent)
       }
 
@@ -381,9 +390,9 @@ function convert (src) {
         const cmps = declarations[i]
         for (const cmp of cmps) {
           if (node.parent.type !== 'Program') {
-            inlineRegistrations += /:/.test(cmp) ?
-              `._r(${cmp.replace(':', ',')})` :
-              `._r("${cmp}", ${cmp})`
+            inlineRegistrations += /:/.test(cmp)
+              ? `._r(${cmp.replace(':', ',')})`
+              : `._r("${cmp}", ${cmp})`
           } else {
             if (lastRootScopeNode) {
               if (node.end > lastRootScopeNode.end) {
@@ -413,7 +422,6 @@ function convert (src) {
     const lastElPos = reverseSeek(chunks, end, />$/)
     const blockEnd = inParens ? end - 1 : lastElPos > -1 ? lastElPos : end
     chunks[blockEnd] = chunks[blockEnd] + '`'
-
   }
 
   function isserFactory ({ key, mod, method }) {
@@ -423,8 +431,8 @@ function convert (src) {
       const expr = callee.type !== 'ParenthesizedExpression'
         ? callee
         : (callee.expression.type !== 'SequenceExpression'
-            ? callee.expression
-            : callee.expression.expressions[callee.expression.expressions.length - 1]
+          ? callee.expression
+          : callee.expression.expressions[callee.expression.expressions.length - 1]
         )
       const directCall = expr.type === 'MemberExpression' &&
         expr.property && expr.property.name === method &&
